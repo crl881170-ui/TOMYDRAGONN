@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Special Surprise For You ❤️</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0d0914 0%, #1a1026 50%, #261533 100%);
+      --accent-color: #f3a683;
+      --accent-glow: rgba(243, 166, 131, 0.4);
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --text-main: #f8f9fa;
+      --text-muted: #c8d6e5;
+      --font-title: 'Playfair Display', serif;
+      --font-sub: 'Cinzel', serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Canvas */
+    #particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Floating Header Controls - Highest Z-Index so buttons are always clickable */
+    .header-controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 12px;
+      z-index: 9999;
+    }
+
+    .icon-btn {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      font-size: 1.2rem;
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.1);
+      background: rgba(255, 255, 255, 0.2);
+      border-color: var(--accent-color);
+    }
+
+    .music-btn.playing {
+      animation: spin 6s linear infinite;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .music-playback-error {
+      display: none;
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 20;
+      max-width: min(360px, calc(100vw - 32px));
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--text-main);
+      background: rgba(13, 9, 20, 0.92);
+      font-size: 0.8rem;
+    }
+
+    .music-playback-error.visible {
+      display: block;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Main Container & Screens */
+    .container {
+      width: 100%;
+      max-width: 720px;
+      padding: 24px;
+      z-index: 10;
+      position: relative;
+    }
+
+    .screen {
+      display: none;
+      opacity: 0;
+      transform: translateY(20px);
+      text-align: center;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 1;
+      transform: translateY(0);
+      animation: screen-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes screen-enter {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .screen.active {
+        animation: none;
+      }
+    }
+
+    /* Titles */
+    .sub-title {
+      font-family: var(--font-sub);
+      font-size: 0.85rem;
+      letter-spacing: 3px;
+      color: var(--accent-color);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .main-title {
+      font-family: var(--font-title);
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    .description {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      font-style: italic;
+    }
+
+    /* Timer Cards */
+    .timer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 32px;
+    }
+
+    .timer-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 16px 8px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .timer-num {
+      font-family: var(--font-title);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .timer-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent-color);
+      margin-top: 4px;
+    }
+
+    /* Buttons */
+    .primary-btn {
+      background: linear-gradient(135deg, #f3a683 0%, #e17055 100%);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-family: var(--font-sub);
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(225, 112, 85, 0.4);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(225, 112, 85, 0.6);
+    }
+
+    /* Interactive Gift Box */
+    .gift-container {
+      margin: 40px 0;
+      cursor: pointer;
+      perspective: 1000px;
+    }
+
+    .gift-box {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(2deg); }
+    }
+
+    .gift-box.shake {
+      animation: shake 0.5s ease infinite;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-8deg); }
+      75% { transform: rotate(8deg); }
+    }
+
+    .gift-body {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #e84393 0%, #d63031 100%);
+      border-radius: 12px;
+      position: relative;
+      box-shadow: 0 15px 35px rgba(214, 48, 49, 0.4);
+    }
+
+    .gift-ribbon-v {
+      position: absolute;
+      top: 0; left: 42%; width: 16%; height: 100%;
+      background: #ffeaa7;
+    }
+
+    .gift-ribbon-h {
+      position: absolute;
+      top: 42%; left: 0; width: 100%; height: 16%;
+      background: #ffeaa7;
+    }
+
+    .gift-bow {
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.2rem;
+    }
+
+    /* Letter Card */
+    .glass-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      text-align: left;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      margin-bottom: 28px;
+    }
+
+    .letter-body {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: #e2e8f0;
+      white-space: pre-line;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .letter-body::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .letter-body::-webkit-scrollbar-thumb {
+      background: var(--accent-color);
+      border-radius: 4px;
+    }
+
+    /* Polaroid Grid */
+    .polaroid-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      width: 100%;
+      margin-bottom: 28px;
+    }
+
+    .polaroid {
+      background: #fff;
+      padding: 12px 12px 24px 12px;
+      border-radius: 4px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      transform: rotate(-2deg);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .polaroid:nth-child(even) {
+      transform: rotate(3deg);
+    }
+
+    .polaroid:hover {
+      transform: scale(1.05) rotate(0deg);
+      z-index: 20;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    }
+
+    .polaroid img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 2px;
+    }
+
+    /* Media Player Container */
+    .video-container {
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 28px;
+      aspect-ratio: 16/9;
+    }
+
+    .video-container video {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Modal / Customization Panel */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #1a1026;
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 28px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
+      color: var(--text-main);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+
+    .modal-title {
+      font-family: var(--font-title);
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+      color: var(--accent-color);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    .form-group input, 
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 20000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+    }
+
+    .lightbox-modal img {
+      max-width: 90%;
+      max-height: 80vh;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 480px) {
+      .main-title { font-size: 1.8rem; }
+      .timer-num { font-size: 1.3rem; }
+      .polaroid-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Particle Canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Top Floating Controls -->
+  <div class="header-controls">
+    <button class="icon-btn music-btn" id="musicToggleBtn" type="button" title="Play/Pause background music">🎵</button>
+    <button class="icon-btn" id="settingsBtn" title="Customize Content">⚙️</button>
+  </div>
+
+  <audio id="bgMusic" src="birthday-song.mp3" loop preload="metadata"></audio>
+  <div class="music-playback-error" id="musicPlaybackError" role="status" aria-live="polite"></div>
+
+  <!-- Main Multi-Step Interactive Container -->
+  <div class="container">
+
+    <!-- STEP 1: COUNTDOWN SCREEN -->
+    <div class="screen active" id="screen1">
+      <div class="sub-title">FROM UR BOYFIEE</div>
+      <h1 class="main-title" id="displayRecipientTitle">Unya ra i-open ha</h1>
+      <p class="description">I HOPE U APPRECIATE THIS WEB I MADE TO U</p>
+
+      <div class="timer-grid">
+        <div class="timer-card">
+          <div class="timer-num" id="minutes">00</div>
+          <div class="timer-label">Minutes</div>
+        </div>
+        <div class="timer-card">
+          <div class="timer-num" id="seconds">00</div>
+          <div class="timer-label">Seconds</div>
+        </div>
+      </div>
+
+      <button class="primary-btn" onclick="nextScreen(2)">OPEN</button>
+    </div>
+
+    <!-- STEP 2: GIFT UNWRAPPING SCREEN -->
+    <div class="screen" id="screen2">
+      <div class="sub-title">✨ THERE IS SOMETHING FOR YOU ✨</div>
+      <h1 class="main-title">A Special Surprise</h1>
+      <p class="description">Click the gift below to open your surprise!</p>
+
+      <div class="gift-container" onclick="openGift()">
+        <div class="gift-box" id="giftBox">
+          <div class="gift-bow">🎀</div>
+          <div class="gift-body">
+            <div class="gift-ribbon-v"></div>
+            <div class="gift-ribbon-h"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: BIRTHDAY LETTER SCREEN -->
+    <div class="screen" id="screen3">
+      <div class="sub-title">A BIRTHDAY MESSAGE FOR MY WIFEYY</div>
+      <h1 class="main-title">Your Special Day</h1>
+      
+      <div class="glass-card">
+        <h3 style="font-family: var(--font-title); color: var(--accent-color); margin-bottom: 12px;" id="letterHeading">A HAPPY BIRTHDAY MY DRAGONN</h3>
+        <div class="letter-body" id="displayLetterBody">
+Wishing you the most special birthday ever! 🎂✨
+
+Thank you for always being there, making my days so much brighter and happier. As you step into this new year of your life, I pray that you are always blessed with great health, long life, and that all your dreams come true.
+
+May today and every day ahead be filled with endless smiles and happiness.
+
+I love you today, tomorrow, and always! 💖
+        </div>
+      </div>
+
+      <button class="primary-btn" onclick="nextScreen(4)">NEXT</button>
+    </div>
+
+    <!-- STEP 4: POLAROID MEMORIES GALLERY -->
+    <div class="screen" id="screen4">
+      <div class="sub-title">✨ OUR MEMORIES ✨</div>
+      <h1 class="main-title">Every Moment Captured</h1>
+      <p class="description">Click a photo to enlarge!</p>
+
+      <div class="polaroid-grid" id="polaroidContainer">
+        <div class="polaroid" onclick="openLightbox(this)">
+          <img src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=500" alt="Memory 1">
+        </div>
+        <div class="polaroid" onclick="openLightbox(this)">
+          <img src="https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=500" alt="Memory 2">
+        </div>
+        <div class="polaroid" onclick="openLightbox(this)">
+          <img src="https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=500" alt="Memory 3">
+        </div>
+        <div class="polaroid" onclick="openLightbox(this)">
+          <img src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=500" alt="Memory 4">
+        </div>
+      </div>
+
+      <button class="primary-btn" onclick="nextScreen(5)">Watch Video 🎥</button>
+    </div>
+
+    <!-- STEP 5: VIDEO MESSAGE -->
+    <div class="screen" id="screen5">
+      <div class="sub-title">🎬 A MOMENT IN YOU 🎬</div>
+      <h1 class="main-title">A VIDEO OF U NA U'RE SOO CUTIEE</h1>
+      <p class="description">A little video just for you...</p>
+
+      <div class="video-container" id="videoWrapper">
+        <video id="mainVideo" controls preload="metadata" playsinline poster="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800">
+          <source src="birthday-video.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <p class="description" id="videoPlaybackError" role="status" aria-live="polite" hidden></p>
+
+      <button class="primary-btn" onclick="nextScreen(6)">Birthday Wishes ✨</button>
+    </div>
+
+    <!-- STEP 6: FINAL REPLAY SCREEN -->
+    <div class="screen" id="screen6">
+      <div class="sub-title">💖 ALWAYS & FOREVER 💖</div>
+      <h1 class="main-title" id="displayClosingTitle">With All My Love</h1>
+      <p class="description" id="displayClosingSub">Thank you for being part of my life. Happy Birthday! 🎂✨</p>
+
+      <button class="primary-btn" onclick="nextScreen(1)">Replay From Start 🔄</button>
+    </div>
+
+  </div>
+
+  <!-- Customization Panel Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-title">⚙️ Customize Content</div>
+      
+      <div class="form-group">
+        <label>Recipient Name / Title</label>
+        <input type="text" id="inputRecipient" value="Unya ra i-open ha">
+      </div>
+
+      <div class="form-group">
+        <label>Birthday Letter Text</label>
+        <textarea id="inputLetter" rows="5">Wishing you the most special birthday ever! 🎂✨
+
+Thank you for always being there, making my days so much brighter and happier. May you always be healthy and all your dreams come true!
+
+I love you always! ❤️</textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Upload/Replace Polaroid Photos</label>
+        <input type="file" id="inputPhotoUpload" accept="image/*" multiple style="font-size:0.8rem;">
+      </div>
+
+      <div class="form-group">
+        <label>Choose a background audio file</label>
+        <input type="file" id="inputMusicFile" accept="audio/*" style="font-size:0.8rem;">
+      </div>
+
+      <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="saveCustomizations()">Save & Apply ✨</button>
+      <button class="primary-btn" style="width: 100%; margin-top: 8px; background: transparent; border: 1px solid var(--glass-border); box-shadow:none;" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="Enlarged View">
+  </div>
+
+  <script>
+    // --- Floating Particle Background Canvas ---
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2 + 0.5;
+        this.speedY = Math.random() * 0.5 + 0.2;
+        this.opacity = Math.random() * 0.6 + 0.2;
+      }
+      update() {
+        this.y -= this.speedY;
+        if (this.y < 0) this.reset();
+      }
+      draw() {
+        ctx.fillStyle = `rgba(243, 166, 131, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 60; i++) {
+      particles.push(new Particle());
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // --- Screen Navigation Logic ---
+    function nextScreen(screenNum) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const target = document.getElementById(`screen${screenNum}`);
+      if (target) target.classList.add('active');
+
+      if (bgMusic.paused) startBackgroundMusic();
+
+      if (screenNum === 5) {
+        if (mainVideo.ended) mainVideo.currentTime = 0;
+        mainVideo.play().catch(error => {
+          videoPlaybackError.textContent = 'Could not play the video. Press the play button or check that birthday-video.mp4 is beside index.html.';
+          videoPlaybackError.hidden = false;
+          console.error('Birthday video playback failed:', error);
+        });
+      } else if (!mainVideo.paused) {
+        mainVideo.pause();
+      }
+    }
+
+    // --- Interactive Gift Box ---
+    function openGift() {
+      const gift = document.getElementById('giftBox');
+      gift.classList.add('shake');
+      setTimeout(() => {
+        gift.classList.remove('shake');
+        nextScreen(3);
+      }, 800);
+    }
+
+    // --- Audio Player Toggle ---
+    const musicBtn = document.getElementById('musicToggleBtn');
+    const musicPlaybackError = document.getElementById('musicPlaybackError');
+    const bgMusic = document.getElementById('bgMusic');
+    const mainVideo = document.getElementById('mainVideo');
+    const videoPlaybackError = document.getElementById('videoPlaybackError');
+    let customMusicObjectUrl = null;
+
+    bgMusic.addEventListener('play', () => {
+      musicBtn.classList.add('playing');
+      musicBtn.setAttribute('aria-label', 'Pause background music');
+      musicPlaybackError.textContent = '';
+      musicPlaybackError.classList.remove('visible');
+    });
+
+    bgMusic.addEventListener('pause', () => {
+      musicBtn.classList.remove('playing');
+      musicBtn.setAttribute('aria-label', 'Play background music');
+    });
+
+    bgMusic.addEventListener('error', () => {
+      musicPlaybackError.textContent = 'Could not load the background audio file.';
+      musicPlaybackError.classList.add('visible');
+      console.error('Background audio failed to load:', bgMusic.currentSrc);
+    });
+
+    mainVideo.addEventListener('play', () => {
+      videoPlaybackError.hidden = true;
+      videoPlaybackError.textContent = '';
+    });
+
+    mainVideo.addEventListener('error', () => {
+      videoPlaybackError.textContent = 'Could not load the video. Make sure birthday-video.mp4 is beside index.html.';
+      videoPlaybackError.hidden = false;
+      console.error('Birthday video failed to load:', mainVideo.currentSrc);
+    });
+
+    function startBackgroundMusic() {
+      bgMusic.play().catch(error => {
+        musicPlaybackError.textContent = 'Could not play the background audio. Press the music button to try again.';
+        musicPlaybackError.classList.add('visible');
+        console.error('Background audio playback failed:', error);
+      });
+    }
+
+    musicBtn.addEventListener('click', () => {
+      if (bgMusic.paused) {
+        startBackgroundMusic();
+      } else {
+        bgMusic.pause();
+      }
+    });
+
+    // --- Countdown Timer Logic ---
+    const targetDate = Date.now() + 60 * 1000;
+
+    function updateTimer() {
+      const now = new Date().getTime();
+      const diff = targetDate - now;
+
+      if (diff > 0) {
+        const m = Math.floor(diff / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        document.getElementById('minutes').innerText = String(m).padStart(2, '0');
+        document.getElementById('seconds').innerText = String(s).padStart(2, '0');
+      } else {
+        document.getElementById('minutes').innerText = '00';
+        document.getElementById('seconds').innerText = '00';
+      }
+    }
+    setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // --- Lightbox Functions ---
+    function openLightbox(element) {
+      const imgSrc = element.querySelector('img').src;
+      document.getElementById('lightboxImg').src = imgSrc;
+      document.getElementById('lightboxModal').classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightboxModal').classList.remove('active');
+    }
+
+    // --- Customization Settings Modal ---
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.classList.add('active');
+    });
+
+    function closeModal() {
+      settingsModal.classList.remove('active');
+    }
+
+    function saveCustomizations() {
+      const name = document.getElementById('inputRecipient').value;
+      const letter = document.getElementById('inputLetter').value;
+      const musicFile = document.getElementById('inputMusicFile').files[0];
+      const photoFiles = document.getElementById('inputPhotoUpload').files;
+
+      if (name) document.getElementById('displayRecipientTitle').innerText = name;
+      if (letter) document.getElementById('displayLetterBody').innerText = letter;
+
+      if (musicFile) {
+        if (customMusicObjectUrl) URL.revokeObjectURL(customMusicObjectUrl);
+        customMusicObjectUrl = URL.createObjectURL(musicFile);
+        bgMusic.src = customMusicObjectUrl;
+        bgMusic.load();
+      }
+
+      if (photoFiles.length > 0) {
+        const grid = document.getElementById('polaroidContainer');
+        grid.innerHTML = '';
+        Array.from(photoFiles).slice(0, 6).forEach((file, idx) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const card = document.createElement('div');
+            card.className = 'polaroid';
+            card.onclick = function() { openLightbox(this); };
+            card.innerHTML = `<img src="${e.target.result}" alt="Memory ${idx + 1}">`;
+            grid.appendChild(card);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      closeModal();
+    }
+  </script>
+</body>
+</html>
